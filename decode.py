@@ -1,8 +1,8 @@
 import base64
 import xml.etree.ElementTree as ET
 
-def parseAttributes():
-    tree = ET.parse('decoded_assertion.xml')
+def parseAttributes(decoded_path = 'assertions/decoded_assertion.xml'):
+    tree = ET.parse(decoded_path)
     root = tree.getroot()
     attributes = []
     for Attribute in root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Attribute'):
@@ -11,7 +11,7 @@ def parseAttributes():
         attributes.append((attributeName, attributeValue))
     return attributes
 
-def decode(encoded_path = 'encoded_assertion.txt', decoded_path = 'decoded_assertion.txt'):
+def decode(encoded_path = 'assertions/encoded_assertion.txt', decoded_path = 'assertions/decoded_assertion.xml'):
     f = open(encoded_path, 'r')
     encoded_assertion = f.read()
     f.close()
