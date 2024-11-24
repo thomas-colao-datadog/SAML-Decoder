@@ -1,7 +1,6 @@
 import base64
 import xml.etree.ElementTree as ET
 import re
-import io
 
 class Assertion:
     def __init__(self, encoded_assertion_path):
@@ -9,7 +8,10 @@ class Assertion:
         self.decoded_assertion = self.decode()
         self.xml_root = ET.fromstring(self.decoded_assertion)
         self.identity_provider = self.parse_idp()
-        self.attributes = self.parse_attributes()
+        if self.identity_provider == "Okta":
+            self.attributes = self.parse_attributes_okta()
+        if self.identity_provider == "Azure":
+            self.attributes = self.parse_attributes_azure()
         pass
 
     def decode(self):
@@ -19,7 +21,7 @@ class Assertion:
         return str(base64.b64decode(encoded_assertion).decode('utf-8'))
         
     
-    def parse_attributes(self):
+    def parse_attributes_okta(self):
         attributes = []
         for Attribute in self.xml_root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Attribute'):
             attributeName = str(Attribute.attrib)
@@ -28,11 +30,25 @@ class Assertion:
             attributes.append((attributeName, attributeValue))
         return attributes
     
+    def parse_attributes_azure(self):
+        attributes = []
+        for Attribute in self.xml_root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Attribute'):
+            print(Attribute.tag)
+            attributeName = str(Attribute.attrib)
+            attributeName = re.search("Name': '(.*?)'", attributeName)[1]
+            attributeValue = Attribute.find("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue").text
+            attributes.append((attributeName, attributeValue))
+        return attributes
+    
     def parse_idp(self):
         for issuer in self.xml_root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Issuer'):
-            idp = re.search("www.(.*).com", issuer.text)[1]
-            if idp != None:
-                return idp
+            idp = re.search("\\.(.*)\\.", issuer.text)[1]
+            if idp == "okta":
+                return "Okta"
+            elif idp == "windows":
+                return "Azure"
+            else:
+                return "N/A"
 
     
     def get_assertion(self):
