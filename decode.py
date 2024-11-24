@@ -1,12 +1,14 @@
 import base64
 import xml.etree.ElementTree as ET
+import re
 
 def parseAttributes(decoded_path = 'assertions/decoded_assertion.xml'):
     tree = ET.parse(decoded_path)
     root = tree.getroot()
     attributes = []
     for Attribute in root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Attribute'):
-        attributeName = Attribute.attrib
+        attributeName = str(Attribute.attrib)
+        attributeName = re.search("def:(.*?)'", attributeName)[1]
         attributeValue = Attribute.find("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue").text
         attributes.append((attributeName, attributeValue))
     return attributes
