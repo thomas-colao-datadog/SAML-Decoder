@@ -3,38 +3,26 @@ import xml.etree.ElementTree as ET
 import re
 
 class Assertion:
-    def __init__(self, encoded_assertion_path):
-        self.encoded_assertion_path = encoded_assertion_path
+    def __init__(self, encoded_assertion):
+        self.encoded_assertion = encoded_assertion
         self.decoded_assertion = self.decode()
         self.xml_root = ET.fromstring(self.decoded_assertion)
         self.identity_provider = self.parse_idp()
         if self.identity_provider == "Okta":
-            self.attributes = self.parse_attributes_okta()
+            self.attributes = self.parse_attributes("def:(.*?)'")
         if self.identity_provider == "Azure":
-            self.attributes = self.parse_attributes_azure()
+            self.attributes = self.parse_attributes("Name': '(.*?)'")
         pass
 
     def decode(self):
-        f = open(self.encoded_assertion_path, 'r')
-        encoded_assertion = f.read()
-        f.close()
-        return str(base64.b64decode(encoded_assertion).decode('utf-8'))
+        return str(base64.b64decode(self.encoded_assertion).decode('utf-8'))
         
     
-    def parse_attributes_okta(self):
+    def parse_attributes(self, regex):
         attributes = []
         for Attribute in self.xml_root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Attribute'):
             attributeName = str(Attribute.attrib)
-            attributeName = re.search("def:(.*?)'", attributeName)[1]
-            attributeValue = Attribute.find("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue").text
-            attributes.append((attributeName, attributeValue))
-        return attributes
-    
-    def parse_attributes_azure(self):
-        attributes = []
-        for Attribute in self.xml_root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Attribute'):
-            attributeName = str(Attribute.attrib)
-            attributeName = re.search("Name': '(.*?)'", attributeName)[1]
+            attributeName = re.search(regex, attributeName)[1]
             attributeValue = Attribute.find("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue").text
             attributes.append((attributeName, attributeValue))
         return attributes
@@ -64,12 +52,30 @@ class Assertion:
                 output += "\n" + str(self.attributes[i][0]) + ": "
                 output += str(self.attributes[i][1])
         return output
+
+
+## This is not working as expected. It appears that python's input() cannot read > 1024 characters
+#  Current workaround is `echo ${encoded assertion} > assertion.txt`
+#  May implement reading from stdin
+def get_assertion():
+    encoded_assertion_path = input("Enter the path to the encoded assertion\n")
+    assertion = None
+    if re.search("\\.", encoded_assertion_path) == None:
+        assertion = encoded_assertion_path
+    else:
+        try:
+            f = open(encoded_assertion_path)
+            assertion = f.read()
+            f.close()
+        except:
+            print("Error: Could not read file: " + encoded_assertion_path)
+    return assertion
     
 if __name__ == "__main__":
-    encoded_assertion_path = input("Enter the path to the encoded assertion " + 
-                                   "(Default: \"encoded_assertion.txt\"\n")
-    if encoded_assertion_path == "":
-        encoded_assertion_path = "encoded_assertion.txt"
-    assertion = Assertion(encoded_assertion_path)
+    encoded_assertion = None
+    while encoded_assertion == None:
+        encoded_assertion = get_assertion()
+
+    assertion = Assertion(encoded_assertion)
     print()
     print(assertion)
