@@ -6,17 +6,41 @@ class Assertion:
     def __init__(self, encoded_assertion):
         self.encoded_assertion = encoded_assertion
         self.decoded_assertion = self.decode()
-        self.xml_root = ET.fromstring(self.decoded_assertion)
-        self.identity_provider = self.parse_idp()
-        if self.identity_provider == "Okta":
-            self.attributes = self.parse_attributes("def:(.*?)'")
-        if self.identity_provider == "Azure":
-            self.attributes = self.parse_attributes("Name': '(.*?)'")
+        self.elements = self.parse_xml(ET.fromstring(self.decoded_assertion))
         pass
 
     def decode(self):
         return str(base64.b64decode(self.encoded_assertion).decode('utf-8'))
         
+    def parse_xml(self, root):
+        elements = []
+        for element in root.iter():
+            # elements.append((re.search("}(.*?)$", element.tag)[1], element.attrib, element.text))
+            # print(re.search("}(.*?)$", element.tag)[1], re.search("'Name': '(.*?)'|attribute-def:(.*?)'", str(element.attrib)), element.text)
+            print((self.clean_tag(element.tag), self.clean_attrib(element.attrib), self.clean_text(element.text)))
+            elements.append((self.clean_tag(element.tag), self.clean_attrib(element.attrib), self.clean_text(element.text)))
+        return elements
+    
+    def clean_tag(self, tag):
+        return re.search("}(.*?)$", tag)[1]
+    
+    def clean_attrib(self, attrib):
+        output = re.search("'Name': '(.*?)'|attribute-def:(.*?)'", str(attrib))
+        if not output == None:
+            return output[1]
+    
+    def clean_text(self, text):
+        return text
+    
+    def parse_certificates(self):
+        certificates = []
+        # for element in self.xml_root.find('{http://www.w3.org/2000/09/xmldsig#}Signature'):
+        #     print(element)
+            # print(certificate.find('{http://www.w3.org/2000/09/xmldsig#}KeyInfo'))
+        for element in self.xml_root.iter():
+            if "X509Certificate" in re.search("}(.*?)$", element.tag)[1]:
+                print(element.text)
+        pass
     
     def parse_attributes(self, regex):
         attributes = []
@@ -38,7 +62,7 @@ class Assertion:
                 return "N/A"
 
     
-    def get_assertion(self):
+    def get_assertion_xml(self):
         return self.decoded_assertion
     
     def __str__(self):
@@ -78,4 +102,4 @@ if __name__ == "__main__":
 
     assertion = Assertion(encoded_assertion)
     print()
-    print(assertion)
+    
