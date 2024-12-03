@@ -4,22 +4,22 @@ import re
 
 class Assertion:
     def __init__(self, encoded_assertion):
-        self.encoded_assertion = encoded_assertion
-        self.decoded_assertion = self.decode()
+        # Assertion Metadata
+        self.decoded_assertion = self.decode(encoded_assertion)
         self.elements = self.parse_xml(ET.fromstring(self.decoded_assertion))
-        pass
 
-    def decode(self):
-        return str(base64.b64decode(self.encoded_assertion).decode('utf-8'))
+    def decode(self, encoded_assertion):
+        return str(base64.b64decode(encoded_assertion).decode('utf-8'))
         
     def parse_xml(self, root):
         elements = []
         for element in root.iter():
-            # elements.append((re.search("}(.*?)$", element.tag)[1], element.attrib, element.text))
-            # print(re.search("}(.*?)$", element.tag)[1], re.search("'Name': '(.*?)'|attribute-def:(.*?)'", str(element.attrib)), element.text)
-            print((self.clean_tag(element.tag), self.clean_attrib(element.attrib), self.clean_text(element.text)))
+            # print((self.clean_tag(element.tag), self.clean_attrib(element.attrib), self.clean_text(element.text)))
             elements.append((self.clean_tag(element.tag), self.clean_attrib(element.attrib), self.clean_text(element.text)))
         return elements
+    
+    def parse_attributes(self):
+        pass
     
     def clean_tag(self, tag):
         return re.search("}(.*?)$", tag)[1]
@@ -31,50 +31,14 @@ class Assertion:
     
     def clean_text(self, text):
         return text
-    
-    def parse_certificates(self):
-        certificates = []
-        # for element in self.xml_root.find('{http://www.w3.org/2000/09/xmldsig#}Signature'):
-        #     print(element)
-            # print(certificate.find('{http://www.w3.org/2000/09/xmldsig#}KeyInfo'))
-        for element in self.xml_root.iter():
-            if "X509Certificate" in re.search("}(.*?)$", element.tag)[1]:
-                print(element.text)
-        pass
-    
-    def parse_attributes(self, regex):
-        attributes = []
-        for Attribute in self.xml_root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Attribute'):
-            attributeName = str(Attribute.attrib)
-            attributeName = re.search(regex, attributeName)[1]
-            attributeValue = Attribute.find("{urn:oasis:names:tc:SAML:2.0:assertion}AttributeValue").text
-            attributes.append((attributeName, attributeValue))
-        return attributes
-    
-    def parse_idp(self):
-        for issuer in self.xml_root.iter('{urn:oasis:names:tc:SAML:2.0:assertion}Issuer'):
-            idp = re.search("\\.(.*)\\.", issuer.text)[1]
-            if idp == "okta":
-                return "Okta"
-            elif idp == "windows":
-                return "Azure"
-            else:
-                return "N/A"
 
-    
     def get_assertion_xml(self):
         return self.decoded_assertion
     
     def __str__(self):
         output = ""
-        if self.identity_provider == "N/A":
-            output = "Error: Unable to decode SAML Assertion"
-        else:
-            output += "Identity Provider: " + self.identity_provider + "\n"
-            output += "Attributes:"
-            for i in range(0, len(self.attributes)):
-                output += "\n" + str(self.attributes[i][0]) + ": "
-                output += str(self.attributes[i][1])
+        for element in self.elements:
+            output += str(element) + "\n"
         return output
 
 
@@ -101,5 +65,5 @@ if __name__ == "__main__":
         encoded_assertion = get_assertion()
 
     assertion = Assertion(encoded_assertion)
-    print()
+    print(assertion)
     
