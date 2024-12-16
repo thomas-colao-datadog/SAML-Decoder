@@ -2,6 +2,7 @@ import base64
 import xml.etree.ElementTree as ET
 import re
 import sys
+from cryptography import x509
 
 class Element:
     def __init__(self, title, value):
@@ -16,10 +17,12 @@ class Element:
         return self.value
     
     def expand_certificate(self):
+        delimiters = ["-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----"]
         if not self.title == "X509Certificate":
             return
         else:
-            pass
+            pem_file = delimiters[0] + self.value + delimiters[1]
+            cert = x509.load_pem_x509_certificate(pem_file.encode())
     
     def __str__(self):
         output = ""
