@@ -39,7 +39,6 @@ class Certificate(Element):
 class Attribute(Element):
     def __init__(self, title, attributes = []):
         super().__init__(title, attributes)
-        self.attributes = attributes
 
     def __str__(self):
         output = ""
@@ -51,23 +50,26 @@ class Attribute(Element):
 class Assertion:
     def __init__(self, encoded_assertion):
         self.decoded_assertion = self.decode(encoded_assertion)
-        self.elements = self.build_elements(self.parse_xml(ET.fromstring(self.decoded_assertion)))
+        self.elements = self.build_elements()
 
     def decode(self, encoded_assertion):
-        return str(base64.b64decode(encoded_assertion).decode('utf-8'))
+        decoded = str(base64.b64decode(encoded_assertion).decode('utf-8'))
+        return decoded
         
-    def parse_xml(self, root):
+    def parse_xml(self):
+        root = ET.fromstring(self.decoded_assertion)
         raw_elements = []
         for e in root.iter():
             raw_elements.append((self.clean_tag(e.tag), self.clean_attrib(e.attrib), self.clean_text(e.text)))
         return raw_elements
     
-    def build_elements(self, raw_elements):
+    def build_elements(self):
+        raw_elements = self.parse_xml()
         element_list = []
         for i in range(0, len(raw_elements)):
             match raw_elements[i][0]:
                 case "Attribute":
-                    attribute = Attribute(raw_elements[i][0])
+                    attribute = Attribute(raw_elements[i][0]) 
                     attributes = [raw_elements[i][1]]
                     temp = []
                     for j in range (i+1, len(raw_elements)):
@@ -115,22 +117,25 @@ def get_assertion():
         encoded_assertion_path = input("Enter the path to the encoded assertion\n")
     else:
         encoded_assertion_path = str(sys.argv[1])
+        sys.argv.remove(encoded_assertion_path)
+    encoded_assertion = None
     assertion = None
     try:
         f = open(encoded_assertion_path)
-        assertion = f.read()
+        encoded_assertion = f.read()
         f.close()
-    except:
-        print("Error: Could not read file: " + encoded_assertion_path)
+        assertion = Assertion(encoded_assertion)
+    except Exception as err:
+        print(f"Unexpected Error {err}")
     return assertion
     
 if __name__ == "__main__":
     """
     Loops until user enters a valid assertion file
     """
-    encoded_assertion = None
-    while encoded_assertion == None:
-        encoded_assertion = get_assertion()
-    assertion = Assertion(encoded_assertion)
-    print(assertion)
+    assertion = None
+    while assertion == None:
+        assertion = get_assertion()
+    if not assertion.get_elements() == None:
+        print(assertion)
     
