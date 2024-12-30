@@ -6,40 +6,57 @@ from cryptography import x509
 
 class Element:
     def __init__(self, title, value):
+        """An Element in a SAML Assertion
+
+        Parameters:
+        title -- name of the element
+        value -- value of the element
+        """
         self.title = title
         self.value = value
 
     def get_title(self):
+        """Getter for title"""
         return self.title
     
     def get_value(self):
+        """Getter for value"""
         return self.value
     
     def __str__(self):
+        """Returns element as string"""
         output = str(self.title) + ": " + str(self.value)
         return output
     
 class Certificate(Element):
     def __init__(self, title, value):
+        """An X509 Cerfticate Element
+        
+        Parameters:
+        title -- name of the element
+        value -- the encoded certificate
+        """
         super().__init__(title, value)
-        self.details = self.expand_certificate()
+        self.details = self.expand_certificate() #the certificate's issuer, subject, and creation and expiration dates
     
     def expand_certificate(self):
+        """Decodes certificate and extracts details"""
         delimiters = ["-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----"]
         pem_file = delimiters[0] + self.value + delimiters[1]
         cert = x509.load_pem_x509_certificate(pem_file.encode())
         return [("Issuer: ", cert.issuer),  ("Subject: ", cert.subject), ("Not Valid Before: ", cert.not_valid_before_utc), ("Not Valid After: ", cert.not_valid_after_utc)]
 
     def __str__(self):
+        """Returns certificate as string"""
         output = super().__str__()
         for d in self.details:
             output += "\n " + str(d[0]) + str(d[1])
         return output
 
 class Attribute(Element):
+
     def __init__(self, title, attributes = []):
         super().__init__(title, attributes)
-        self.attributes = attributes
 
     def __str__(self):
         output = ""
@@ -50,24 +67,39 @@ class Attribute(Element):
 
 class Assertion:
     def __init__(self, encoded_assertion):
+        """A SAML Assertion
+        
+        Parameters:
+        encoded_assertion -- base64 encoded SAML assertion
+        """
         self.decoded_assertion = self.decode(encoded_assertion)
-        self.elements = self.build_elements(self.parse_xml(ET.fromstring(self.decoded_assertion)))
+        self.elements = self.build_elements()
 
     def decode(self, encoded_assertion):
-        return str(base64.b64decode(encoded_assertion).decode('utf-8'))
+        """Decode assertion to utf-8
+
+        Parameters:
+        encoded_assertion -- based64 encoded SAML assertion
+        """
+        decoded = str(base64.b64decode(encoded_assertion).decode('utf-8'))
+        return decoded
         
-    def parse_xml(self, root):
+    def parse_xml(self):
+        """Parse XML from decoded assertion"""
+        root = ET.fromstring(self.decoded_assertion)
         raw_elements = []
         for e in root.iter():
             raw_elements.append((self.clean_tag(e.tag), self.clean_attrib(e.attrib), self.clean_text(e.text)))
         return raw_elements
     
-    def build_elements(self, raw_elements):
+    def build_elements(self):
+        """Create list of elements from XML tree"""
+        raw_elements = self.parse_xml()
         element_list = []
         for i in range(0, len(raw_elements)):
             match raw_elements[i][0]:
                 case "Attribute":
-                    attribute = Attribute(raw_elements[i][0])
+                    attribute = Attribute(raw_elements[i][0]) 
                     attributes = [raw_elements[i][1]]
                     temp = []
                     for j in range (i+1, len(raw_elements)):
@@ -88,49 +120,81 @@ class Assertion:
 
     
     def clean_tag(self, tag):
+        """Isolate element name
+        
+        Parameters:
+        tag -- an element's name
+        """
         return re.search("}(.*?)$", tag)[1]
     
     def clean_attrib(self, attrib):
+        """Isolate element attributes
+        
+        Parameters:
+        attrib -- a dictionary of an element's attributes
+        """
         output = re.search("'Name': '(.*?)'|attribute-def:(.*?)\'", str(attrib))
         if not output == None:
             return output[1]
     
     def clean_text(self, text):
+        """Isolate element text
+        
+        Parameters:
+        text -- text before first subelement
+        """
         return text
 
     def get_assertion_xml(self):
+        """Getter for assertion"""
         return self.decoded_assertion
     
     def get_elements(self):
+        """"Getter for elements"""
         return self.elements
     
     def __str__(self):
+        """Returns elements as a string"""
         output = ""
         for e in self.elements:
             output += str(e) + "\n"
         return output
 
-def get_assertion():
-    if len(sys.argv) < 2:
-        encoded_assertion_path = input("Enter the path to the encoded assertion\n")
-    else:
-        encoded_assertion_path = str(sys.argv[1])
-    assertion = None
-    try:
-        f = open(encoded_assertion_path)
-        assertion = f.read()
-        f.close()
-    except:
-        print("Error: Could not read file: " + encoded_assertion_path)
-    return assertion
+def read_flags():
+    """Parses command line arguments
     
+    -f -- input file
+    -o -- output file
+    """
+    flags = ["-f", "-o"]
+    output = []
+    if len(sys.argv) > 1:
+        args = sys.argv[1:]
+        for i in range (0, len(args)):
+            match args[i]:
+                case "-f":
+                    output.append(args[i + 1])
+                    i += 1
+                case "-o":
+                    output.append(args[i + 1])
+                    i += 1
+    return output
+
 if __name__ == "__main__":
     """
-    Loops until user enters a valid assertion file
+    Reads assertion from file and prints to stdout or specified output file
     """
-    encoded_assertion = None
-    while encoded_assertion == None:
-        encoded_assertion = get_assertion()
-    assertion = Assertion(encoded_assertion)
-    print(assertion)
+    flags = read_flags()
+    try:
+        f = open(flags[0], 'r')
+        assertion = Assertion(f.read())
+        f.close()
+    except Exception as err:
+        print(f"Unexpected Error {err}")
+    if len(flags) > 1 and not flags[1] == None:
+        f = open(flags[1], 'w')
+        f.write(str(assertion))
+        f.close()
+    else:
+        print(assertion)
     
