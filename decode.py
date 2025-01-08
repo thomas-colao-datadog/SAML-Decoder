@@ -24,11 +24,12 @@ class Element:
         return self.value
     
     def __str__(self):
-        """Returns element as string"""
+        """Returns element as a string"""
         output = str(self.title) + ": " + str(self.value)
         return output
     
     def markdown(self):
+        """Returns element as markdown"""
         output = "**" + str(self.title) + "** " + str(self.value)
         return output
 
@@ -51,13 +52,14 @@ class Certificate(Element):
         return [("Not Valid Before", cert.not_valid_before_utc), ("Not Valid After", cert.not_valid_after_utc)]
 
     def __str__(self):
-        """Returns certificate as string"""
+        """Returns certificate as a string"""
         output = super().__str__()
         for d in self.details:
             output += "\n " + str(d[0]) + " " + str(d[1])
         return output
     
     def markdown(self):
+        """Returns certificate as markdown"""
         output = "**" + self.title + "** \n"
         output += "```\n" + self.value + "\n```" 
         for d in self.details:
@@ -71,6 +73,7 @@ class Attribute(Element):
         super().__init__(title, attributes)
 
     def __str__(self):
+        """Returns attribute as a string"""
         output = ""
         output += self.title + ": " + self.value[0]
         for a in self.value[1]:
@@ -78,6 +81,7 @@ class Attribute(Element):
         return output
     
     def markdown(self):
+        """Returns attribute as markdown"""
         output = ""
         output += "**" + self.title + "** " + self.value[0]
         output += "\n```\n"
@@ -175,13 +179,14 @@ class Assertion:
         return self.elements
     
     def __str__(self):
-        """Returns elements as a string"""
+        """Returns assertion as a string"""
         output = ""
         for e in self.elements:
             output += str(e) + "\n"
         return output
     
     def markdown(self):
+        """Returns assertion as markdown"""
         output = "## Assertion\n"
         for e in self.elements:
             output += e.markdown() + "\n"

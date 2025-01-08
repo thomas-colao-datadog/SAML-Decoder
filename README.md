@@ -25,12 +25,14 @@ echo <ENCODED_ASSERTION> > assertion.txt
 
 With the assertion properly formatted, the following command outputs the assertion contents to stdout
 ```sh
-python decode -f <ASSERTION_FILE> 
+python decode.py -f <ASSERTION_FILE> 
 ```
 
 You can also specify an output file for the assertion
 ```sh
-python decode -f <ASSERTION_FILE> -o <OUTPUT_FILE>
+python decode.py -f <ASSERTION_FILE> -o <OUTPUT_FILE>
 ```
 
 The `-m` flag will output the assertion in markdown. This allows for quick copy-pasting from the command line into a compact, readable TL;DR
+```sh
+python decode.py -f <ASSERTION_FILE> -m
