@@ -28,6 +28,10 @@ class Element:
         output = str(self.title) + ": " + str(self.value)
         return output
     
+    def markdown(self):
+        output = "**" + str(self.title) + "** " + str(self.value)
+        return output
+
 class Certificate(Element):
     def __init__(self, title, value):
         """An X509 Cerfticate Element
@@ -44,14 +48,22 @@ class Certificate(Element):
         delimiters = ["-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----"]
         pem_file = delimiters[0] + self.value + delimiters[1]
         cert = x509.load_pem_x509_certificate(pem_file.encode())
-        return [("Issuer: ", cert.issuer),  ("Subject: ", cert.subject), ("Not Valid Before: ", cert.not_valid_before_utc), ("Not Valid After: ", cert.not_valid_after_utc)]
+        return [("Not Valid Before", cert.not_valid_before_utc), ("Not Valid After", cert.not_valid_after_utc)]
 
     def __str__(self):
         """Returns certificate as string"""
         output = super().__str__()
         for d in self.details:
-            output += "\n " + str(d[0]) + str(d[1])
+            output += "\n " + str(d[0]) + " " + str(d[1])
         return output
+    
+    def markdown(self):
+        output = "**" + self.title + "** \n"
+        output += "```\n" + self.value + "\n```" 
+        for d in self.details:
+            output += "\n**" + str(d[0]) + "** "+ str(d[1])
+        return output
+
 
 class Attribute(Element):
 
@@ -63,6 +75,15 @@ class Attribute(Element):
         output += self.title + ": " + self.value[0]
         for a in self.value[1]:
             output += "\n " + str(a)    
+        return output
+    
+    def markdown(self):
+        output = ""
+        output += "**" + self.title + "** " + self.value[0]
+        output += "\n```\n"
+        for a in self.value[1]:
+            output += str(a)
+        output += "\n```"
         return output
 
 class Assertion:
@@ -159,26 +180,40 @@ class Assertion:
         for e in self.elements:
             output += str(e) + "\n"
         return output
+    
+    def markdown(self):
+        output = "## Assertion\n"
+        for e in self.elements:
+            output += e.markdown() + "\n"
+        return output
+
 
 def read_flags():
     """Parses command line arguments
     
     -f -- input file
     -o -- output file
+    -m -- markdown
     """
-    flags = ["-f", "-o"]
-    output = []
+    flags = ["f", "o", "m"]
+    output = {"-f":None, "-o":None, "-m":False}
     if len(sys.argv) > 1:
         args = sys.argv[1:]
         for i in range (0, len(args)):
             match args[i]:
                 case "-f":
-                    output.append(args[i + 1])
+                    output["-f"] = args[i + 1]
                     i += 1
                 case "-o":
-                    output.append(args[i + 1])
+                    output["-o"] = args[i + 1]
                     i += 1
+                case "-m":
+                    output["-m"] = True
     return output
+
+def handle_error(err):
+    print(f'Unexpected Error {err}')
+    sys.exit()
 
 if __name__ == "__main__":
     """
@@ -186,15 +221,23 @@ if __name__ == "__main__":
     """
     flags = read_flags()
     try:
-        f = open(flags[0], 'r')
+        f = open(flags["-f"], 'r')
         assertion = Assertion(f.read())
         f.close()
     except Exception as err:
-        print(f"Unexpected Error {err}")
-    if len(flags) > 1 and not flags[1] == None:
-        f = open(flags[1], 'w')
-        f.write(str(assertion))
-        f.close()
+        handle_error(err)
+    assetion_output = ""
+    if flags["-m"]:
+        assertion_output = assertion.markdown()
     else:
-        print(assertion)
+        assertion_output = str(assertion)
+    try:
+        if not flags["-o"] == None:
+            f = open(flags["-o"], 'w')
+            f.write(assertion_output)
+            f.close()
+        else:
+            print(assertion_output)
+    except Exception as err:
+            handle_error(err)
     

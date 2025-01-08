@@ -32,3 +32,5 @@ You can also specify an output file for the assertion
 ```sh
 python decode -f <ASSERTION_FILE> -o <OUTPUT_FILE>
 ```
+
+The `-m` flag will output the assertion in markdown. This allows for quick copy-pasting from the command line into a compact, readable TL;DR
