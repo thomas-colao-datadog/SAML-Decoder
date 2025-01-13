@@ -1,3 +1,5 @@
 *.txt
 *.xml
+*.md
 !requirements.txt
+!README.md
