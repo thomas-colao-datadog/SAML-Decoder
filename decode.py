@@ -42,14 +42,16 @@ class Certificate(Element):
         value -- the encoded certificate
         """
         super().__init__(title, value)
-        self.details = self.expand_certificate() #the certificate's issuer, subject, and creation and expiration dates
+        self.details = self.expand_certificate()
     
     def expand_certificate(self):
         """Decodes certificate and extracts details"""
-        delimiters = ["-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----"]
+        delimiters = ["-----BEGIN CERTIFICATE-----",
+                      "-----END CERTIFICATE-----"]
         pem_file = delimiters[0] + self.value + delimiters[1]
         cert = x509.load_pem_x509_certificate(pem_file.encode())
-        return [("Not Valid Before", cert.not_valid_before_utc), ("Not Valid After", cert.not_valid_after_utc)]
+        return [("Not Valid Before", cert.not_valid_before_utc), 
+                ("Not Valid After", cert.not_valid_after_utc)]
 
     def __str__(self):
         """Returns certificate as a string"""
@@ -114,7 +116,9 @@ class Assertion:
         root = ET.fromstring(self.decoded_assertion)
         raw_elements = []
         for e in root.iter():
-            raw_elements.append((self.clean_tag(e.tag), self.clean_attrib(e.attrib), self.clean_text(e.text)))
+            raw_elements.append((self.clean_tag(e.tag),
+                                 self.clean_attrib(e.attrib),
+                                 self.clean_text(e.text)))
         return raw_elements
     
     def build_elements(self):
@@ -137,10 +141,12 @@ class Assertion:
                 case "AttributeValue":
                     pass
                 case "X509Certificate":
-                    element_list.append(Certificate(raw_elements[i][0], raw_elements[i][2])) 
+                    element_list.append(Certificate(raw_elements[i][0],
+                                                    raw_elements[i][2])) 
                 case _:
                     if not raw_elements[i][2] == None:
-                        element_list.append(Element(raw_elements[i][0], raw_elements[i][2]))
+                        element_list.append(Element(raw_elements[i][0],
+                                                    raw_elements[i][2]))
         return element_list
 
     
@@ -158,7 +164,8 @@ class Assertion:
         Parameters:
         attrib -- a dictionary of an element's attributes
         """
-        output = re.search("'Name': '(.*?)'|attribute-def:(.*?)\'", str(attrib))
+        output = re.search("'Name': '(.*?)'|attribute-def:(.*?)\'",
+                           str(attrib))
         if not output == None:
             return output[1]
     
@@ -222,7 +229,8 @@ def handle_error(err):
 
 if __name__ == "__main__":
     """
-    Reads assertion from file and prints to stdout or specified output file
+    Reads assertion from file and prints to stdout or 
+    specified output file
     """
     flags = read_flags()
     try:
